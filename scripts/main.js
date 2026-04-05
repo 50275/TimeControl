@@ -1,3 +1,12 @@
+// Reset slider when not playing. Might be necessary before joining multiplayer. 
+Events.on(StateChangeEvent, event => {
+    if(event.to == GameState.State.playing) return; 
+    let speed = 1;
+    Time.setDeltaProvider(() => Math.min(Core.graphics.getDeltaTime() * 60 * speed, 3 * speed));
+    foldedButton.setText(speedText(0));
+    timeSlider.setValue(0);
+}); 
+
 let cols = [Pal.lancerLaser, Pal.accent, Color.valueOf("cc6eaf")]; //Pink from BetaMindy
 let folded = false;
 let curSpeed = 0;
@@ -82,6 +91,14 @@ function speedText(speed){
 }
 
 function visibility(){
+    if (Vars.net.client()) {
+        let speed = 1;
+        Time.setDeltaProvider(() => Math.min(Core.graphics.getDeltaTime() * 60 * speed, 3 * speed));
+        foldedButton.setText(speedText(0));
+        timeSlider.setValue(0);
+
+        return false;
+    }
     if(!Vars.ui.hudfrag.shown || Vars.ui.minimapfrag.shown()) return false;
     if(!Vars.mobile) return true;
     
