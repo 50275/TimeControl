@@ -7,6 +7,15 @@ Events.on(StateChangeEvent, event => {
     timeSlider.setValue(0);
 }); 
 
+// Erase all out of bounds units every 2 seconds.
+Timer.schedule(() => {
+    Groups.unit.each(u => {
+        if(u.x !== u.x){
+            u.remove();
+        }
+    });
+}, 0, 2);
+
 let cols = [Pal.lancerLaser, Pal.accent, Color.valueOf("cc6eaf")]; //Pink from BetaMindy
 let folded = false;
 let curSpeed = 0;
