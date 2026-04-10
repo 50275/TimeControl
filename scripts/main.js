@@ -140,6 +140,7 @@ Events.run(Trigger.update, () => {
 });
 
 // Slow down the game before joining multiplayer. 
+Events.on(ClientPreConnectEvent, event => setSpeed(0));
 
 // Remove all out of bounds units every 2 seconds. (Ally air units are respawned instead.) 
 Timer.schedule(() => {
