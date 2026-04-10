@@ -13,9 +13,6 @@ function sliderTable(table){
     table.table(Tex.buttonEdge3, t => {
         t.name = "tc-slidertable";
         timeSlider = new Slider(-maxSpeed, maxSpeed, 1, false);
-        timeSlider.changed(() => {
-            if(!timeSlider.isDragging()) timeSlider.setValue(curSpeed)
-        }); 
         timeSlider.setValue(0);
         
         l = t.button("[accent]x1", () => {
@@ -111,9 +108,12 @@ if(!Vars.headless){
 // Set the speed of the game to the highest safe value (see canChangeSpeed)
 function setSpeed(v){
     v = Math.floor(v); 
+    // 1x speed is always acceptable
     if(v == 0) forceSetSpeed(0); 
     else if(canChangeSpeed(v)) forceSetSpeed(v);
+    // find the maximum acceptable speed
     else if(v > 0 && curSpeed < 0) setSpeed(v-1);  
+    else timeSlider.setValue(curSpeed); 
 }
 
 // Forcibly change the speed of the game
@@ -135,11 +135,13 @@ function canChangeSpeed(v){
 Events.run(Trigger.update, () => { 
     if(curSpeed > 0 && Vars.state.getState() == GameState.State.playing && !canChangeSpeed(curSpeed)) { 
         forceSetSpeed(curSpeed - 1); 
+        timeSlider.setValue(curSpeed); 
     }
 });
 
-// Erase all out of bounds units every 2 seconds. 
-// respawn?? 
+// Slow down the game before joining multiplayer. 
+
+// Remove all out of bounds units every 2 seconds. (Ally air units are respawned instead.) 
 Timer.schedule(() => {
     if(Vars.net.client()) return; 
     Groups.unit.each(u => {
