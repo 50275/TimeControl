@@ -13,6 +13,9 @@ function sliderTable(table){
     table.table(Tex.buttonEdge3, t => {
         t.name = "tc-slidertable";
         timeSlider = new Slider(-maxSpeed, maxSpeed, 1, false);
+        timeSlider.changed(() => {
+            if(!timeSlider.isDragging()) timeSlider.setValue(curSpeed)
+        }); 
         timeSlider.setValue(0);
         
         l = t.button("[accent]x1", () => {
@@ -107,8 +110,10 @@ if(!Vars.headless){
 
 // Set the speed of the game to the highest safe value (see canChangeSpeed)
 function setSpeed(v){
-    if(canChangeSpeed(v)) forceSetSpeed(v);
-    else if(v > 0) forceSetSpeed(0);  
+    v = Math.floor(v); 
+    if(v == 0) forceSetSpeed(0); 
+    else if(canChangeSpeed(v)) forceSetSpeed(v);
+    else if(v > 0 && curSpeed < 0) setSpeed(v-1);  
 }
 
 // Forcibly change the speed of the game
@@ -121,23 +126,42 @@ function forceSetSpeed(v){
     timeSlider.setValue(v);
 }
 
-// Return whether the game is safe to run at this speed. 
+// Return whether the game is safe to run at this speed. If FPS / speed < 5, slow down.  
 function canChangeSpeed(v){
     return v == 0 || Core.graphics.getFramesPerSecond() / Math.pow(2, v) >= 5; 
 }
 
-// Reduce the game speed to a safe level. Will not go below default game speed. Will not trigger in the menus.  
+// Reduce the game speed to a safe level. Will not go below default game speed. Will not trigger in the menus. 
 Events.run(Trigger.update, () => { 
     if(curSpeed > 0 && Vars.state.getState() == GameState.State.playing && !canChangeSpeed(curSpeed)) { 
         forceSetSpeed(curSpeed - 1); 
     }
 });
 
-// Erase all out of bounds units every 2 seconds.
+// Erase all out of bounds units every 2 seconds. 
+// respawn?? 
 Timer.schedule(() => {
+    if(Vars.net.client()) return; 
     Groups.unit.each(u => {
         if(u.x !== u.x){
+            // remove bugged units
             u.remove();
+
+            // respawn bugged units
+            // can't easily respawn ground units (even if capable of boosting). you shouldn't need to anyway. 
+            if(!u.flying) return; 
+            // i don't actually know how to find the enemy spawn right now
+            let team = Vars.player.team(); 
+            if(u.team != team) return; 
+            // try to find a spawn position
+            let core = Vars.player.team().cores().first();
+            if(!core) {
+                // this shouldn't happen
+                if(!Vars.player) return; 
+                u.type.spawn(team, Vars.player.x, Vars.player.y); 
+                return;
+            }
+            u.type.spawn(team, core.x, core.y); 
         }
     });
 }, 0, 2);
