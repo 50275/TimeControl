@@ -1,37 +1,21 @@
-// Reset slider when not playing. Might be necessary before joining multiplayer. 
-Events.on(StateChangeEvent, event => {
-    if(event.to == GameState.State.playing) return; 
-    let speed = 1;
-    Time.setDeltaProvider(() => Math.min(Core.graphics.getDeltaTime() * 60 * speed, 3 * speed));
-    foldedButton.setText(speedText(0));
-    timeSlider.setValue(0);
-}); 
-
-// Erase all out of bounds units every 2 seconds.
-Timer.schedule(() => {
-    Groups.unit.each(u => {
-        if(u.x !== u.x){
-            u.remove();
-        }
-    });
-}, 0, 2);
-
 let cols = [Pal.lancerLaser, Pal.accent, Color.valueOf("cc6eaf")]; //Pink from BetaMindy
 let folded = false;
 let curSpeed = 0;
 let longPress = 30;
 let unfoldTimer = 0;
+let maxSpeed = 4; // Max game speed: maxSpeed ** 2
 
 let timeSlider = null;
 let foldedButton = null;
+let l = null; 
 
 function sliderTable(table){
     table.table(Tex.buttonEdge3, t => {
         t.name = "tc-slidertable";
-        timeSlider = new Slider(-8, 8, 1, false);
+        timeSlider = new Slider(-maxSpeed, maxSpeed, 1, false);
         timeSlider.setValue(0);
         
-        let l = t.button("[accent]x1", () => {
+        l = t.button("[accent]x1", () => {
             curSpeed = Mathf.clamp(curSpeed, -2, 2) - 1;
             foldedButton.fireClick();
             folded = true;
@@ -45,15 +29,7 @@ function sliderTable(table){
         let b = t.button(new TextureRegionDrawable(Icon.refresh), 24, () => timeSlider.setValue(0)).padLeft(6).get();
         b.getStyle().imageUpColor = Pal.accent;
         t.add(timeSlider).padLeft(6).minWidth(200);
-        timeSlider.moved(v => {
-            curSpeed = v;
-            let speed = Math.pow(2, v);
-            Time.setDeltaProvider(() => Math.min(Core.graphics.getDeltaTime() * 60 * speed, 3 * speed));
-            
-            Tmp.c1.lerp(cols, (timeSlider.getValue() + 8) / 16);
-            
-            l.setText(speedText(v));
-        });
+        timeSlider.moved(v => setSpeed(v));
     });
     table.visibility = () => !folded && visibility();
 }
@@ -128,3 +104,40 @@ if(!Vars.headless){
         }
     });
 }
+
+// Set the speed of the game to the highest safe value (see canChangeSpeed)
+function setSpeed(v){
+    if(canChangeSpeed(v)) forceSetSpeed(v);
+    else if(v > 0) forceSetSpeed(0);  
+}
+
+// Forcibly change the speed of the game
+function forceSetSpeed(v){
+    curSpeed = v;
+    let speed = Math.pow(2, v);
+    Time.setDeltaProvider(() => Math.min(Core.graphics.getDeltaTime() * 60 * speed, 3 * speed));
+    Tmp.c1.lerp(cols, (timeSlider.getValue() + 8) / 16);
+    l.setText(speedText(v)); 
+    timeSlider.setValue(v);
+}
+
+// Return whether the game is safe to run at this speed. 
+function canChangeSpeed(v){
+    return v == 0 || Core.graphics.getFramesPerSecond() / Math.pow(2, v) >= 5; 
+}
+
+// Reduce the game speed to a safe level. Will not go below default game speed. Will not trigger in the menus.  
+Events.run(Trigger.update, () => { 
+    if(curSpeed > 0 && Vars.state.getState() == GameState.State.playing && !canChangeSpeed(curSpeed)) { 
+        forceSetSpeed(curSpeed - 1); 
+    }
+});
+
+// Erase all out of bounds units every 2 seconds.
+Timer.schedule(() => {
+    Groups.unit.each(u => {
+        if(u.x !== u.x){
+            u.remove();
+        }
+    });
+}, 0, 2);
