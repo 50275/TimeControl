@@ -1,4 +1,4 @@
-# TimeControl
+# Safe Time Control
 Safely speed up and slow down Mindustry without glitching your units in singleplayer, and banning/rubberbanding yourself in multiplayer. Original by [sk7725](https://github.com/sk7725). 
 
 Key Features
